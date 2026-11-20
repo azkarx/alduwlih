@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ar" dir="rtl" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var own = Object.getOwnPropertyDescriptor(window, 'fetch');
+          var target = window;
+          var desc = own;
+          while (!desc && target) {
+            target = Object.getPrototypeOf(target);
+            if (target) desc = Object.getOwnPropertyDescriptor(target, 'fetch');
+          }
+          if (desc && desc.get && !desc.set && (!own || own.configurable)) {
+            var customFetch = null;
+            var nativeGetter = desc.get;
+            Object.defineProperty(window, 'fetch', {
+              configurable: true,
+              enumerable: desc.enumerable !== false,
+              get: function () {
+                return customFetch || nativeGetter.call(window);
+              },
+              set: function (fn) {
+                if (typeof fn === 'function') customFetch = fn;
+              }
+            });
+          }
+        } catch (e) {}
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            if (
+              event &&
+              typeof event.filename === 'string' &&
+              event.filename.indexOf('chrome-extension://') === 0 &&
+              typeof event.message === 'string' &&
+              event.message.indexOf('Cannot set property fetch') !== -1
+            ) {
+              event.preventDefault();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+    <title>إدارة مخزن الدولية — مستودع إكسسوارات مصنع الملابس</title>
+    <meta
+      name="description"
+      content="نظام إدارة مخزون إكسسوارات مصنع الملابس — متابعة الأصناف، أرصدة العملاء، حركات الإضافة والصرف، التنبيهات، والتقارير."
+    />
+    <meta property="og:title" content="إدارة مخزن الدولية — مستودع إكسسوارات مصنع الملابس" />
+    <meta
+      property="og:description"
+      content="نظام إدارة مخزون إكسسوارات مصنع الملابس — متابعة الأصناف، أرصدة العملاء، حركات الإضافة والصرف، التنبيهات، والتقارير."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230B1D35'/%3E%3Cpath d='M12 27L32 14l20 13v23H12V27zm10 9v10h20V36H22z' fill='%2320C5E8'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Readex+Pro:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-[#071426] text-[#d7e3fc] antialiased selection:bg-[#03bee1] selection:text-[#004857]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

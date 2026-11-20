@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Cairo", "Readex Pro", system-ui, -apple-system, sans-serif;
+  --font-sans: "Readex Pro", "Cairo", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "Readex Pro", monospace;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: #071426;
+    color: #d7e3fc;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  button:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  summary,
+  [role="button"] {
+    cursor: pointer;
+    transition:
+      transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      box-shadow 180ms ease,
+      filter 160ms ease,
+      opacity 160ms ease;
+  }
+
+  button:not(:disabled):active,
+  a[href]:active,
+  [role="button"]:active {
+    transform: scale(0.968);
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid rgba(70, 218, 253, 0.65);
+    outline-offset: 2px;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
+@layer components {
+  /* Admin Obsidian Glassmorphism Surfaces */
+  .admin-aurora-bg {
+    background-color: #061121;
+    background-image:
+      radial-gradient(circle at 85% 12%, rgba(22, 119, 255, 0.18), transparent 38%),
+      radial-gradient(circle at 12% 82%, rgba(32, 197, 232, 0.14), transparent 42%),
+      radial-gradient(circle at 50% 45%, rgba(16, 41, 71, 0.45), transparent 65%);
+  }
+
+  .glass-panel {
+    background: rgba(11, 29, 53, 0.68);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-color: rgba(175, 198, 255, 0.13);
+  }
+
+  .glass-card {
+    background: rgba(16, 41, 71, 0.54);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(175, 198, 255, 0.14);
+    box-shadow: 0 10px 32px rgba(2, 8, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-card-interactive {
+    background: rgba(16, 41, 71, 0.56);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(175, 198, 255, 0.15);
+    box-shadow: 0 10px 32px rgba(2, 8, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition:
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .glass-card-interactive:hover {
+    transform: translateY(-2px);
+    background: rgba(20, 50, 86, 0.68);
+    border-color: rgba(70, 218, 253, 0.38);
+    box-shadow:
+      0 16px 36px rgba(2, 8, 23, 0.55),
+      0 0 22px rgba(32, 197, 232, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .glass-card-interactive:active {
+    transform: translateY(0) scale(0.985);
+    border-color: rgba(32, 197, 232, 0.65);
+    box-shadow: 0 6px 18px rgba(2, 8, 23, 0.5), 0 0 16px rgba(22, 119, 255, 0.22);
+  }
+
+  .glass-sub {
+    background: rgba(7, 20, 38, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(175, 198, 255, 0.11);
+  }
+
+  .glass-sub-interactive {
+    background: rgba(7, 20, 38, 0.58);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(175, 198, 255, 0.12);
+    transition:
+      transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .glass-sub-interactive:hover {
+    transform: translateY(-1px);
+    background: rgba(13, 33, 61, 0.78);
+    border-color: rgba(70, 218, 253, 0.38);
+    box-shadow: 0 8px 20px rgba(2, 8, 23, 0.38);
+  }
+
+  .glass-sub-interactive:active {
+    transform: scale(0.985);
+    border-color: rgba(70, 218, 253, 0.6);
+  }
+
+  /* Primary CTA Sweep Sheen + Active Tactile Press */
+  .shine-cta {
+    position: relative;
+    overflow: hidden;
+    font-family: var(--font-display);
+  }
+
+  .shine-cta::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(120%) skewX(-22deg);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.24) 50%,
+      transparent 100%
+    );
+    transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
+  .shine-cta:hover::after {
+    transform: translateX(-120%) skewX(-22deg);
+  }
+
+  .shine-cta:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+    box-shadow: 0 10px 26px rgba(22, 119, 255, 0.32);
+  }
+
+  .shine-cta:active:not(:disabled) {
+    transform: translateY(0) scale(0.968);
+    filter: brightness(0.96);
+  }
+
+  /* Dalia Bespoke Velvet Amethyst & Rose-Gold Glass Theme */
+  .dalia-aurora-bg {
+    background-color: #140920;
+    background-image:
+      radial-gradient(circle at 88% 10%, rgba(236, 72, 153, 0.24), transparent 38%),
+      radial-gradient(circle at 12% 20%, rgba(168, 85, 247, 0.24), transparent 42%),
+      radial-gradient(circle at 65% 88%, rgba(251, 191, 36, 0.12), transparent 40%);
+  }
+
+  .glass-dalia {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 14px 40px rgba(8, 3, 18, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .dalia-card-interactive {
+    background: rgba(255, 255, 255, 0.065);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 14px 40px rgba(8, 3, 18, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition:
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .dalia-card-interactive:hover {
+    transform: translateY(-2.5px);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(244, 114, 182, 0.5);
+    box-shadow:
+      0 18px 44px rgba(236, 72, 153, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  .dalia-card-interactive:active {
+    transform: translateY(0) scale(0.985);
+    border-color: rgba(244, 114, 182, 0.85);
+    background: rgba(236, 72, 153, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print-surface {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
+    backdrop-filter: none !important;
+  }
+}

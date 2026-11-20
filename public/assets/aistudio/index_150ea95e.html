@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="إدارة مخزن الدولية — نظام إدارة مخزون الإكسسوارات والملابس: أصناف، عملاء، صرف وإضافة، تنبيهات، تقارير"/>
+<title>إدارة مخزن الدولية — مستودع الإكسسوارات والملابس</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23071426'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='%231677FF'%3E%D8%AE%3C/text%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      bg:'#071426', panel:'#0B1D35', card:'#102947', card2:'#143358', line:'#1C3A60', line2:'#264D7E',
+      overlay:'#133256', primary:'#1677FF', primaryh:'#2F86FF', cyan:'#20C5E8', green:'#10B981',
+      amber:'#F59E0B', red:'#EF4444', ink:'#FFFFFF', ink2:'#8FA6C3', ink3:'#4B6485'
+    },
+    fontFamily: { sans: ['"IBM Plex Sans Arabic"','"IBM Plex Sans"','Tahoma','sans-serif'] }
+  }}
+};
+</script>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body class="bg-bg text-ink font-sans">
+
+<!-- ============== شاشة تسجيل الدخول ============== -->
+<section id="login-screen" class="hidden min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10">
+  <div class="login-glow" aria-hidden="true"></div>
+  <div class="relative w-full max-w-lg flex flex-col items-center gap-4">
+    <div class="login-logo">
+      <span class="material-symbols-outlined text-[30px] text-primary">warehouse</span>
+      <span class="text-[12px] font-bold leading-[15px] text-center">إدارة<br/>المخزن</span>
+    </div>
+    <div class="station-chip">
+      <span class="dot"></span>
+      <span class="font-mono-ltr">STATION ID: WH-INTL-01</span>
+    </div>
+    <div class="text-center">
+      <h1 class="text-[26px] font-bold tracking-tight">إدارة مخزن الدولية</h1>
+      <p class="text-ink2 text-[14px] mt-1">نظام إدارة مخزون الإكسسوارات والملابس — أصناف، عملاء، حركة وتقارير</p>
+    </div>
+
+    <div class="login-card w-full">
+      <div class="flex items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 class="text-[17px] font-semibold">تسجيل الدخول إلى النظام</h2>
+          <p class="text-ink2 text-[12.5px] mt-0.5">للوصول إلى بيانات المخزن والعملاء والتقارير</p>
+        </div>
+        <div class="login-card-icon"><span class="material-symbols-outlined text-[22px]">domain</span></div>
+      </div>
+
+      <form id="login-form" class="flex flex-col gap-4" novalidate>
+        <div class="field">
+          <label class="label" for="login-email">البريد الإلكتروني أو المعرف</label>
+          <div class="input-wrap">
+            <span class="material-symbols-outlined lead">badge</span>
+            <input id="login-email" class="input" type="email" placeholder="mohammed@warehouse.sa" autocomplete="username" dir="ltr"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="label" for="login-password">كلمة المرور</label>
+            <button type="button" id="login-forgot" class="link-btn">نسيت كلمة المرور؟</button>
+          </div>
+          <div class="input-wrap">
+            <span class="material-symbols-outlined lead">lock</span>
+            <input id="login-password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="trail" id="toggle-pass" aria-label="إظهار كلمة المرور"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <label class="check"><input type="checkbox" id="login-remember" checked/><span class="box"></span><span>تذكر هذا الجهاز في المحطة</span></label>
+          <span class="ssl-hint"><span class="material-symbols-outlined text-[15px] text-green">verified_user</span> اتصال مشفر</span>
+        </div>
+
+        <div class="demo-box">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="demo-title"><span class="material-symbols-outlined text-[16px] text-cyan">manage_history</span> بيانات الدخول التجريبية (اختيار سريع)</span>
+            <span class="demo-chip">DEMO</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button type="button" class="demo-role" id="demo-admin">
+              <div class="flex items-center justify-between"><span class="font-semibold text-[13px]">مدير النظام</span><span class="material-symbols-outlined text-primary text-[18px]">admin_panel_settings</span></div>
+              <p class="text-ink2 text-[11px] mt-1.5 leading-4">صلاحيات كاملة: إضافة، صرف، تعديل الرصيد، حذف، المستخدمين والإعدادات</p>
+              <p class="font-mono-ltr text-[10.5px] mt-1.5 text-primary" dir="ltr">mohammed@warehouse.sa · admin123</p>
+            </button>
+            <button type="button" class="demo-role" id="demo-super">
+              <div class="flex items-center justify-between"><span class="font-semibold text-[13px]">مشرف مستودع</span><span class="material-symbols-outlined text-ink2 text-[18px]">visibility</span></div>
+              <p class="text-ink2 text-[11px] mt-1.5 leading-4">قراءة ومتابعة فقط: الأصناف، الحركات والتقارير (بدون تعديل)</p>
+              <p class="font-mono-ltr text-[10.5px] mt-1.5 text-ink2" dir="ltr">sara@warehouse.sa · super123</p>
+            </button>
+          </div>
+          <p class="demo-note"><span class="material-symbols-outlined text-[15px] text-cyan">info</span> نظام مخزون مخصص لمتابعة الكميات وحركات الإضافة والصرف — لا يُضمّن بيانات مالية.</p>
+        </div>
+
+        <div id="login-error" class="hidden error-box" role="alert"></div>
+
+        <button type="submit" id="login-submit" class="btn btn-primary btn-block btn-lg">
+          <span>تسجيل الدخول للمستودع</span>
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="login-foot">
+      <span><span class="dot dot-sm"></span> النظام الرسمي — بُني بعناية</span>
+      <span>إصدار النظام: <b class="font-mono-ltr">v1.0.0-stable</b></span>
+      <span>جميع الحقوق محفوظة © 2026 إدارة المخزن</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============== هيكل التطبيق ============== -->
+<div id="app-shell" class="hidden">
+  <div id="sb-backdrop" aria-hidden="true"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo"><span class="material-symbols-outlined">warehouse</span></div>
+      <div class="flex-1 min-w-0">
+        <div class="sb-title" id="sb-title">إدارة المخزن</div>
+        <div class="sb-sub">مستودع الإكسسوارات والملابس</div>
+      </div>
+      <button id="sb-close" class="icon-btn lg:hidden" aria-label="إغلاق القائمة"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="sb-chip"><span class="material-symbols-outlined text-[15px] text-green">verified_user</span><span id="sb-connection">قاعدة بيانات محلية</span></div>
+    <nav id="nav-list" class="sb-nav" aria-label="التنقل الرئيسي"></nav>
+    <div class="sb-foot">
+      <div class="cap-card">
+        <div class="flex items-center justify-between text-[11px] text-ink2"><span>إشغال المستودع</span><span id="sb-cap-pct" class="tnum">—</span></div>
+        <div class="cap-bar"><div id="sb-cap-fill" class="cap-fill"></div></div>
+        <div class="flex items-center justify-between text-[11px] mt-1.5"><span id="sb-cap-used" class="tnum">—</span><span id="sb-cap-total" class="tnum">—</span></div>
+      </div>
+      <button id="btn-logout" class="btn btn-ghost btn-block mt-3"><span class="material-symbols-outlined text-[18px]">logout</span><span>تسجيل الخروج</span></button>
+      <div class="sb-version"><span id="sb-version" class="font-mono-ltr">v1.0.0</span><span class="dot dot-sm"></span></div>
+    </div>
+  </aside>
+
+  <div class="main-wrap">
+    <header id="topbar" class="topbar">
+      <div class="flex items-center gap-3 min-w-0">
+        <button id="sb-open" class="icon-btn lg:hidden" aria-label="فتح القائمة"><span class="material-symbols-outlined">menu</span></button>
+        <div class="min-w-0">
+          <div class="tb-crumb" id="tb-crumb">لوحة التحكم</div>
+          <h2 class="tb-title" id="tb-title">نظرة عامة</h2>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="db-chip" class="db-chip hidden sm:inline-flex"></span>
+        <span id="tb-clock" class="tb-clock hidden md:inline-flex tnum" dir="ltr">--:--:--</span>
+        <div class="bell-wrap">
+          <button id="bell-btn" class="icon-btn bell" aria-label="التنبيهات">
+            <span class="material-symbols-outlined">notifications</span>
+            <span id="bell-badge" class="bell-badge hidden">0</span>
+          </button>
+          <div id="bell-panel" class="bell-panel hidden" role="menu"></div>
+        </div>
+        <div id="user-chip" class="user-chip"></div>
+        <button id="btn-logout-top" class="icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><span class="material-symbols-outlined text-[20px]">logout</span></button>
+      </div>
+    </header>
+    <main id="page" class="page-root"></main>
+  </div>
+</div>
+
+<!-- جذور عناصر واجهة مشتركة -->
+<div id="modal-root"></div>
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+<!-- المكتبات -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- التطبيق -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/pages-dashboard.js"></script>
+<script src="js/pages-items.js"></script>
+<script src="js/pages-stock.js"></script>
+<script src="js/pages-reports.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
