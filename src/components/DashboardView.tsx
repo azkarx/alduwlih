@@ -1,7 +1,11 @@
 import { motion } from 'motion/react';
 import React from 'react';
 import type { NavPage, StockAlert, WarehouseState } from '../types/warehouse';
-import { computeAllItemMetrics, computeCustomerBalances } from '../utils/warehouseLogic';
+import {
+  buildMovementChartData,
+  computeAllItemMetrics,
+  computeCustomerBalances,
+} from '../utils/warehouseLogic';
 import { formatDateTime, formatNum, movementMeta } from './UiShared';
 
 interface DashboardViewProps {
@@ -27,23 +31,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     .filter((c) => c.totalQuantity > 0)
     .sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-  const dayBuckets: Array<{ label: string; inQty: number; outQty: number }> = [];
-  const today = new Date();
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString('ar-EG', { weekday: 'short' });
-    let inQty = 0;
-    let outQty = 0;
-    for (const m of state.movements) {
-      if (m.createdAt.slice(0, 10) === key) {
-        if (m.type === 'stock_in') inQty += Math.abs(m.quantityDelta);
-        if (m.type === 'stock_out') outQty += Math.abs(m.quantityDelta);
-      }
-    }
-    dayBuckets.push({ label, inQty, outQty });
-  }
+  const dayBuckets = buildMovementChartData(state.movements);
   const maxChartVal = Math.max(100, ...dayBuckets.flatMap((b) => [b.inQty, b.outQty]));
 
   const catTotals = new Map<string, number>();
@@ -227,7 +215,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               const inH = Math.round((b.inQty / maxChartVal) * 130);
               const outH = Math.round((b.outQty / maxChartVal) * 130);
               return (
-                <div key={idx} className="group flex flex-col items-center gap-2">
+                <div key={b.key} className="group flex flex-col items-center gap-2">
                   <div className="glass-sub-interactive flex h-[146px] w-full items-end justify-center gap-1.5 rounded-xl px-1.5 pb-2 pt-3">
                     <motion.div
                       initial={{ scaleY: 0 }}

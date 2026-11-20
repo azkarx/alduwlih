@@ -133,11 +133,21 @@ export function subscribeToChat(
   settings: WarehouseSettings,
   userId: string,
   onMessage: (message: ChatMessage) => void,
-  onConnectionChange: (connected: boolean) => void
+  onConnectionChange: (connected: boolean) => void,
+  onPresenceChange: (onlineUserIds: string[]) => void,
+  onPresenceError: (error: Error | null) => void
 ): () => void {
   const client = requireSupabaseClient(settings);
   const channel: RealtimeChannel = client
-    .channel(`warehouse-chat-${userId}`)
+    .channel('warehouse-chat-presence', {
+      config: { private: true, presence: { key: userId } },
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const onlineUserIds = Object.entries(channel.presenceState())
+        .filter(([, presences]) => presences.length > 0)
+        .map(([presenceKey]) => presenceKey);
+      onPresenceChange(onlineUserIds);
+    })
     .on(
       'postgres_changes',
       {
@@ -163,7 +173,38 @@ export function subscribeToChat(
       }
     )
     .subscribe((status) => {
-      onConnectionChange(status === 'SUBSCRIBED');
+      const subscribed = status === 'SUBSCRIBED';
+      onConnectionChange(subscribed);
+      if (!subscribed) {
+        onPresenceChange([]);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onPresenceError(
+            new Error('تعذر الاتصال الآمن بحالة الطرف الآخر. أعد تشغيل مخطط Supabase المحدّث.')
+          );
+        }
+        return;
+      }
+
+      void channel
+        .track({})
+        .then((result) => {
+          if (result !== 'ok') {
+            onPresenceChange([]);
+            onPresenceError(
+              new Error('تعذر تحديث حالة اتصال الحساب. أعد تشغيل مخطط Supabase المحدّث.')
+            );
+            return;
+          }
+          onPresenceError(null);
+        })
+        .catch((error: unknown) => {
+          onPresenceChange([]);
+          onPresenceError(
+            error instanceof Error
+              ? error
+              : new Error('تعذر تحديث حالة اتصال الحساب. أعد تشغيل مخطط Supabase المحدّث.')
+          );
+        });
     });
 
   return () => {

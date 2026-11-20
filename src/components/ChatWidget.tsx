@@ -8,7 +8,7 @@ import {
   sendChatMessage,
   subscribeToChat,
 } from '../services/chatService';
-import { MAX_CHAT_MESSAGE_LENGTH } from '../utils/chat';
+import { isChatPeerOnline, MAX_CHAT_MESSAGE_LENGTH } from '../utils/chat';
 import { USER_AVATARS } from '../utils/userAvatars';
 
 interface ChatWidgetProps {
@@ -40,8 +40,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
   const [sending, setSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const [peerOnline, setPeerOnline] = useState(false);
   const [error, setError] = useState('');
+  const [presenceError, setPresenceError] = useState('');
   const [notificationPermission, setNotificationPermission] = useState<
     NotificationPermission | 'unsupported'
   >(() => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission));
@@ -88,8 +89,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
     let active = true;
     let unsubscribe = () => {};
     let unreadRefreshTimer: number | undefined;
+    let onlineUserIds: string[] = [];
     connectedRef.current = false;
-    setConnected(false);
+    setPeerOnline(false);
+    setPresenceError('');
     setLoading(true);
     setError('');
     setPeer(null);
@@ -151,11 +154,30 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
     };
 
     try {
-      unsubscribe = subscribeToChat(settings, user.id, receiveMessage, (isConnected) => {
-        if (!active) return;
-        connectedRef.current = isConnected;
-        setConnected(isConnected);
-      });
+      unsubscribe = subscribeToChat(
+        settings,
+        user.id,
+        receiveMessage,
+        (isConnected) => {
+          if (!active) return;
+          connectedRef.current = isConnected;
+        },
+        (onlineIds) => {
+          onlineUserIds = onlineIds;
+          if (active) {
+            setPeerOnline(isChatPeerOnline(onlineUserIds, peerRef.current?.id ?? null));
+          }
+        },
+        (presenceError) => {
+          if (active) {
+            setPresenceError(
+              presenceError
+                ? getErrorMessage(presenceError, 'تعذر تحديث حالة اتصال الطرف الآخر.')
+                : ''
+            );
+          }
+        }
+      );
     } catch (subscriptionError) {
       setError(getErrorMessage(subscriptionError, 'تعذر الاتصال الفوري بالمحادثة.'));
     }
@@ -172,6 +194,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
           const displayPeer = { ...peerResult, name: peerDisplayName };
           peerRef.current = displayPeer;
           setPeer(displayPeer);
+          setPeerOnline(isChatPeerOnline(onlineUserIds, displayPeer.id));
         }
         for (const message of page.messages) seenMessageIds.current.add(message.id);
         setMessages((current) => mergeMessages(current, page.messages));
@@ -299,10 +322,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
                 <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#9db0ca]">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      connected ? 'bg-emerald-400' : 'bg-amber-400'
+                      peerOnline ? 'bg-emerald-400' : 'bg-slate-400'
                     }`}
                   />
-                  {connected ? 'متصل مباشرة' : 'تحديث تلقائي عند انقطاع الاتصال'}
+                  {peerOnline ? 'متصل' : 'غير متصل'}
                 </p>
               </div>
             </div>
@@ -333,9 +356,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
             </div>
           </header>
 
-          {error && (
+          {(error || presenceError) && (
             <p role="alert" className="border-b border-rose-400/20 bg-rose-400/10 px-4 py-2 text-xs text-rose-200">
-              {error}
+              {error || presenceError}
             </p>
           )}
 

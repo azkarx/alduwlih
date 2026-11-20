@@ -7,6 +7,7 @@ import {
   allocateStockToCustomer,
   applyStockIn,
   applyStockOut,
+  buildMovementChartData,
   buildWhatsAppReportText,
   buildWhatsAppUrl,
   clearWarehouseDataKeepConfig,
@@ -24,6 +25,45 @@ import {
   resolveIntroPersona,
   sanitizeWhatsAppPhone,
 } from './warehouseLogic';
+
+test('builds seven local-day chart buckets and counts only stock-in/out movements', () => {
+  const now = new Date(2026, 10, 20, 12);
+  const today = new Date(2026, 10, 20, 0, 30);
+  const yesterday = new Date(2026, 10, 19, 23, 30);
+  const outsideRange = new Date(2026, 10, 13, 12);
+  const makeMovement = (
+    id: string,
+    type: WarehouseState['movements'][number]['type'],
+    quantityDelta: number,
+    createdAt: string
+  ): WarehouseState['movements'][number] => ({
+    id,
+    type,
+    itemId: 'item-1',
+    itemName: 'اختبار',
+    itemSku: 'TEST-1',
+    unit: 'قطعة',
+    quantityDelta,
+    beforeStock: 0,
+    afterStock: quantityDelta,
+    personName: 'محمد رضا',
+    createdAt,
+  });
+  const movements: WarehouseState['movements'] = [
+    makeMovement('in-today', 'stock_in', 25, today.toISOString()),
+    makeMovement('out-yesterday', 'stock_out', -8, yesterday.toISOString()),
+    makeMovement('adjustment-today', 'adjustment', 50, today.toISOString()),
+    makeMovement('in-outside', 'stock_in', 99, outsideRange.toISOString()),
+  ];
+
+  const days = buildMovementChartData(movements, now);
+  assert.equal(days.length, 7);
+  assert.equal(days[6].key, `${now.getFullYear()}-11-20`);
+  assert.equal(days[6].inQty, 25);
+  assert.equal(days[6].outQty, 0);
+  assert.equal(days[5].outQty, 8);
+  assert.equal(days[0].inQty, 0);
+});
 
 function createPopulatedTestState(): WarehouseState {
   let state = createInitialWarehouseState();

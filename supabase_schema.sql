@@ -416,6 +416,23 @@ create policy "Chat recipients can mark messages read" on public.chat_messages
     and read_at is not null
   );
 
+drop policy if exists "Chat participants can read private realtime presence" on realtime.messages;
+drop policy if exists "Chat participants can publish private realtime presence" on realtime.messages;
+
+create policy "Chat participants can read private realtime presence" on realtime.messages
+  for select to authenticated
+  using (
+    realtime.topic() = 'warehouse-chat-presence'
+    and (select public.current_user_is_chat_participant())
+  );
+
+create policy "Chat participants can publish private realtime presence" on realtime.messages
+  for insert to authenticated
+  with check (
+    realtime.topic() = 'warehouse-chat-presence'
+    and (select public.current_user_is_chat_participant())
+  );
+
 do $$
 begin
   if not exists (

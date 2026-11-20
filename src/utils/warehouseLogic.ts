@@ -11,6 +11,52 @@ import type {
   WarehouseState,
 } from '../types/warehouse';
 
+export interface MovementChartDay {
+  key: string;
+  label: string;
+  inQty: number;
+  outQty: number;
+}
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function buildMovementChartData(
+  movements: MovementRecord[],
+  now: Date = new Date()
+): MovementChartDay[] {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const buckets: MovementChartDay[] = [];
+
+  for (let offset = 6; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - offset);
+    buckets.push({
+      key: localDateKey(date),
+      label: date.toLocaleDateString('ar-EG', { weekday: 'short' }),
+      inQty: 0,
+      outQty: 0,
+    });
+  }
+
+  const bucketsByDate = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  for (const movement of movements) {
+    const timestamp = new Date(movement.createdAt);
+    if (Number.isNaN(timestamp.getTime())) continue;
+
+    const bucket = bucketsByDate.get(localDateKey(timestamp));
+    if (!bucket) continue;
+    if (movement.type === 'stock_in') bucket.inQty += Math.abs(movement.quantityDelta);
+    if (movement.type === 'stock_out') bucket.outQty += Math.abs(movement.quantityDelta);
+  }
+
+  return buckets;
+}
+
 export function makeId(prefix: string): string {
   const rand = Math.random().toString(36).slice(2, 7);
   return `${prefix}-${Date.now().toString(36)}-${rand}`;

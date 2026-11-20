@@ -63,6 +63,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY="YOUR_SUPABASE_PUBLISHABLE_KEY"
 
 ## البناء والنشر
 
+> عند إضافة حالة اتصال الشات لمشروع مُعدّ مسبقاً، أعد تشغيل النسخة المحدّثة من `supabase_schema.sql` في SQL Editor لتفعيل سياسات قناة Realtime الخاصة بالمشاركَين.
+
 ```bash
 npm run build
 ```

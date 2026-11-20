@@ -95,9 +95,9 @@
   }
 
   .chat-glass-panel {
-    background: rgba(9, 24, 44, 0.62);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    background: rgba(9, 24, 44, 0.99);
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
     border: 1px solid rgba(214, 231, 255, 0.2);
     box-shadow:
       0 20px 56px rgba(1, 8, 20, 0.58),
