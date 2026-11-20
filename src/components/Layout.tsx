@@ -360,18 +360,18 @@ export const Layout: React.FC<LayoutProps> = ({
                 {!avatarFailed ? (
                   <img
                     src={USER_AVATARS.mohamed}
-                    alt={user.name}
+                    alt="محمد رضا"
                     referrerPolicy="no-referrer"
                     onError={() => setAvatarFailed(true)}
                     className="h-full w-full object-cover object-[50%_20%]"
                   />
                 ) : (
-                  user.name.slice(0, 1)
+                  'م'
                 )}
               </div>
               <div className="hidden text-right sm:block">
                 <div className="max-w-[130px] truncate text-[12px] font-semibold text-white">
-                  {user.name}
+                  محمد رضا
                 </div>
                 <div className="text-[10.5px] text-[#8FA6C3]">مدير النظام</div>
               </div>

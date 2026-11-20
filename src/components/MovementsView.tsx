@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { createMovementPhotoSignedUrl } from '../services/storageService';
 import type { MovementType, ReportPreset, WarehouseState } from '../types/warehouse';
 import { filterMovementsByDateRange } from '../utils/warehouseLogic';
 import { formatDateTime, formatNum, movementMeta } from './UiShared';
@@ -13,6 +14,28 @@ export const MovementsView: React.FC<MovementsViewProps> = ({ state }) => {
   const [preset, setPreset] = useState<ReportPreset>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [photoDialog, setPhotoDialog] = useState<{
+    url?: string;
+    loading: boolean;
+    error?: string;
+  } | null>(null);
+  const photoRequestId = useRef(0);
+
+  const openPhoto = async (path: string) => {
+    const requestId = ++photoRequestId.current;
+    setPhotoDialog({ loading: true });
+    try {
+      const url = await createMovementPhotoSignedUrl(path, state.settings);
+      if (requestId === photoRequestId.current) setPhotoDialog({ url, loading: false });
+    } catch (error) {
+      if (requestId === photoRequestId.current) {
+        setPhotoDialog({
+          loading: false,
+          error: error instanceof Error ? error.message : 'تعذر فتح صورة الحركة.',
+        });
+      }
+    }
+  };
 
   const filtered = useMemo(() => {
     const byDate = filterMovementsByDateRange(state.movements, { preset, startDate, endDate });
@@ -115,19 +138,21 @@ export const MovementsView: React.FC<MovementsViewProps> = ({ state }) => {
                 <th className="px-4 py-3 font-semibold">الرصيد</th>
                 <th className="px-4 py-3 font-semibold">المسؤول</th>
                 <th className="px-4 py-3 font-semibold">العميل / الجهة</th>
+                <th className="px-4 py-3 font-semibold">الصورة</th>
                 <th className="px-4 py-3 font-semibold">ملاحظات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-[#8FA6C3]">
+                  <td colSpan={9} className="px-4 py-12 text-center text-[#8FA6C3]">
                     لا توجد حركات مسجلة.
                   </td>
                 </tr>
               ) : (
                 filtered.map((m) => {
                   const meta = movementMeta(m.type);
+                  const photoPath = m.photoPath;
                   return (
                     <tr
                       key={m.id}
@@ -167,6 +192,20 @@ export const MovementsView: React.FC<MovementsViewProps> = ({ state }) => {
                       </td>
                       <td className="px-4 py-3 font-medium text-white">{m.personName}</td>
                       <td className="px-4 py-3 text-[#20C5E8]">{m.counterpartyName || '—'}</td>
+                      <td className="px-4 py-3">
+                        {photoPath ? (
+                          <button
+                            type="button"
+                            onClick={() => void openPhoto(photoPath)}
+                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#20C5E8]/30 bg-[#20C5E8]/10 px-2.5 text-xs font-semibold text-[#8be6f5] hover:bg-[#20C5E8]/20"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">image</span>
+                            عرض
+                          </button>
+                        ) : (
+                          <span className="text-[#8FA6C3]">—</span>
+                        )}
+                      </td>
                       <td className="max-w-[200px] truncate px-4 py-3 text-[12px] text-[#8FA6C3]">
                         {m.notes || '—'}
                       </td>
@@ -178,6 +217,55 @@ export const MovementsView: React.FC<MovementsViewProps> = ({ state }) => {
           </table>
         </div>
       </div>
+
+      {photoDialog && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              photoRequestId.current += 1;
+              setPhotoDialog(null);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="صورة حركة المخزون"
+        >
+          <div className="glass-card w-full max-w-3xl rounded-2xl p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-bold text-white">صورة حركة المخزون</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  photoRequestId.current += 1;
+                  setPhotoDialog(null);
+                }}
+                aria-label="إغلاق الصورة"
+                className="rounded-lg p-1 text-[#8FA6C3] hover:bg-white/10 hover:text-white"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            {photoDialog.loading && (
+              <div className="flex min-h-40 items-center justify-center text-sm text-[#8FA6C3]">
+                جارٍ تحميل الصورة...
+              </div>
+            )}
+            {photoDialog.error && (
+              <p role="alert" className="py-8 text-center text-sm text-[#ffaaaa]">
+                {photoDialog.error}
+              </p>
+            )}
+            {photoDialog.url && (
+              <img
+                src={photoDialog.url}
+                alt="صورة حركة المخزون"
+                className="mx-auto max-h-[75vh] max-w-full rounded-xl object-contain"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

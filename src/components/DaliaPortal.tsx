@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import warehouseLogoImg from '../assets/images/alduwlih_emblem_logo_1795096287883.jpg';
 import type { SupabaseSyncStatus } from '../services/storageService';
 import type { StockAlert, WarehouseState, WarehouseUser } from '../types/warehouse';
+import { USER_AVATARS } from '../utils/userAvatars';
 import { computeAllItemMetrics, computeCustomerBalances } from '../utils/warehouseLogic';
 import { formatDateTime, formatNum, movementMeta } from './UiShared';
 
@@ -19,7 +20,7 @@ type DaliaTab = 'items' | 'customers' | 'movements' | 'alerts';
 export const DaliaPortal: React.FC<DaliaPortalProps> = ({
   state,
   alerts,
-  user: _user,
+  user,
   syncStatus: _syncStatus,
   onLogout,
 }) => {
@@ -113,6 +114,20 @@ export const DaliaPortal: React.FC<DaliaPortalProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 rounded-xl border border-[#f472b6]/25 bg-white/[0.04] px-2.5 py-1.5">
+              <img
+                src={USER_AVATARS.dalia}
+                alt={user.name}
+                referrerPolicy="no-referrer"
+                className="h-9 w-9 shrink-0 rounded-full border border-[#f472b6]/50 object-cover object-[35%_18%]"
+              />
+              <div className="text-right">
+                <div className="max-w-[120px] truncate text-[12px] font-bold text-white">
+                  {user.name}
+                </div>
+                <div className="text-[10px] text-[#e9a8d1]">مشرفة المخزون</div>
+              </div>
+            </div>
             <button
               type="button"
               onClick={onLogout}

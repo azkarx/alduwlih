@@ -19,16 +19,19 @@ import { ALLOWED_OPERATORS } from './data/seedData';
 import {
   loadLocalWarehouseState,
   getSupabaseClient,
+  rememberLoginAccount,
   restoreWarehouseSession,
   saveLocalWarehouseState,
   signInToWarehouse,
   signOutFromWarehouse,
   syncStateToSupabase,
+  uploadMovementPhoto,
   type SupabaseSyncStatus,
 } from './services/storageService';
 import type {
   AccessoryItem,
   Customer,
+  MovementRecord,
   NavPage,
   OperatorName,
   StockOutSource,
@@ -157,6 +160,11 @@ export default function App() {
 
   const handleLogin = async (email: string, password: string) => {
     const result = await signInToWarehouse(state, email, password);
+    try {
+      rememberLoginAccount(result.user);
+    } catch {
+      notify('info', 'تم تسجيل الدخول، لكن تعذر حفظ الحساب للدخول السريع على هذا الجهاز.');
+    }
     handleLoginSuccess(result.user, result.state);
   };
 
@@ -173,12 +181,30 @@ export default function App() {
     setIntroState(loggedOutUser ? { user: loggedOutUser, mode: 'logout' } : null);
   };
 
+  const attachMovementPhoto = async (
+    nextState: WarehouseState,
+    movement: MovementRecord | undefined,
+    photoFile?: File
+  ): Promise<WarehouseState> => {
+    if (!photoFile) return nextState;
+    if (!movement) throw new Error('تعذر ربط الصورة بحركة المخزون.');
+
+    const photoPath = await uploadMovementPhoto(photoFile, movement.id, state.settings);
+    return {
+      ...nextState,
+      movements: nextState.movements.map((entry) =>
+        entry.id === movement.id ? { ...entry, photoPath } : entry
+      ),
+    };
+  };
+
   // Strict Admin-only mutations
-  const handleCreateItem = (
+  const handleCreateItem = async (
     input: Omit<AccessoryItem, 'id' | 'createdAt' | 'updatedAt'>,
     personName: string,
-    customerId?: string
-  ) => {
+    customerId?: string,
+    photoFile?: File
+  ): Promise<boolean> => {
     if (!isAdmin) {
       notify('error', 'صلاحية الإدارة فقط.');
       return false;
@@ -188,9 +214,15 @@ export default function App() {
       notify('error', res.error || 'تعذر إضافة الصنف.');
       return false;
     }
-    commitState(res.state);
-    notify('success', `تمت إضافة "${input.name}".`);
-    return true;
+    try {
+      const nextState = await attachMovementPhoto(res.state, res.movement, photoFile);
+      commitState(nextState);
+      notify('success', `تمت إضافة "${input.name}".`);
+      return true;
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'تعذر حفظ صورة الحركة.');
+      return false;
+    }
   };
 
   const handleUpdateItem = (
@@ -323,42 +355,58 @@ export default function App() {
     return true;
   };
 
-  const handleStockIn = (params: {
+  const handleStockIn = async (params: {
     itemId: string;
     quantity: number;
     personName: string;
     customerId?: string;
     supplierName?: string;
     notes?: string;
-  }) => {
+    photoFile?: File;
+  }): Promise<boolean> => {
     if (!isAdmin) return false;
-    const res = applyStockIn(state, params);
+    const { photoFile, ...stockInParams } = params;
+    const res = applyStockIn(state, stockInParams);
     if (!res.ok) {
       notify('error', res.error || 'تعذر الإضافة.');
       return false;
     }
-    commitState(res.state);
-    notify('success', 'تمت الإضافة وتحديث الرصيد.');
-    return true;
+    try {
+      const nextState = await attachMovementPhoto(res.state, res.movement, photoFile);
+      commitState(nextState);
+      notify('success', 'تمت الإضافة وتحديث الرصيد.');
+      return true;
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'تعذر حفظ صورة الحركة.');
+      return false;
+    }
   };
 
-  const handleStockOut = (params: {
+  const handleStockOut = async (params: {
     itemId: string;
     quantity: number;
     personName: string;
     source: StockOutSource;
     customerId?: string;
     notes?: string;
-  }) => {
+    photoFile?: File;
+  }): Promise<boolean> => {
     if (!isAdmin) return false;
-    const res = applyStockOut(state, params);
+    const { photoFile, ...stockOutParams } = params;
+    const res = applyStockOut(state, stockOutParams);
     if (!res.ok) {
       notify('error', res.error || 'تعذر الصرف.');
       return false;
     }
-    commitState(res.state, { allowDeletes: true });
-    notify('success', 'تم الصرف وخصم الرصيد.');
-    return true;
+    try {
+      const nextState = await attachMovementPhoto(res.state, res.movement, photoFile);
+      commitState(nextState, { allowDeletes: true });
+      notify('success', 'تم الصرف وخصم الرصيد.');
+      return true;
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'تعذر حفظ صورة الحركة.');
+      return false;
+    }
   };
 
   const handleUpdateThreshold = (itemId: string, newThreshold: number) => {

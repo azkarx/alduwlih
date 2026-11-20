@@ -55,8 +55,12 @@ create table if not exists public.movements (
   counterparty_name text,
   source text,
   notes text default '',
+  photo_path text,
   created_at timestamptz not null default now()
 );
+
+alter table public.movements
+  add column if not exists photo_path text;
 
 create table if not exists public.warehouse_settings (
   id text primary key default 'default',
@@ -72,6 +76,17 @@ create table if not exists public.user_profiles (
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+update public.user_profiles
+set name = case role
+  when 'admin' then 'محمد رضا'
+  when 'manager' then 'داليا محمد'
+end
+where role in ('admin', 'manager')
+  and name is distinct from case role
+    when 'admin' then 'محمد رضا'
+    when 'manager' then 'داليا محمد'
+  end;
 
 create index if not exists idx_movements_created_at on public.movements (created_at desc);
 create index if not exists idx_movements_item_id on public.movements (item_id);
@@ -197,4 +212,34 @@ create policy "Users can read permitted profiles" on public.user_profiles
   using (
     id = (select auth.uid())
     or (select public.current_user_is_admin())
+  );
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'warehouse-movement-photos',
+  'warehouse-movement-photos',
+  false,
+  8388608,
+  array['image/jpeg', 'image/png', 'image/webp']::text[]
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Active users can read warehouse movement photos" on storage.objects;
+drop policy if exists "Admins can upload warehouse movement photos" on storage.objects;
+
+create policy "Active users can read warehouse movement photos" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'warehouse-movement-photos'
+    and (select public.current_user_is_active())
+  );
+
+create policy "Admins can upload warehouse movement photos" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'warehouse-movement-photos'
+    and (select public.current_user_is_admin())
   );

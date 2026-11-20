@@ -3,6 +3,7 @@ import { ALLOWED_OPERATORS } from '../data/seedData';
 import type { OperatorName, StockOutSource, WarehouseState } from '../types/warehouse';
 import { computeItemMetrics, getCustomerAllocationQty } from '../utils/warehouseLogic';
 import { formatNum, OperatorSelector } from './UiShared';
+import { MovementPhotoField } from './MovementPhotoField';
 
 interface StockOutViewProps {
   state: WarehouseState;
@@ -17,7 +18,8 @@ interface StockOutViewProps {
     source: StockOutSource;
     customerId?: string;
     notes?: string;
-  }) => boolean;
+    photoFile?: File;
+  }) => Promise<boolean>;
 }
 
 export const StockOutView: React.FC<StockOutViewProps> = ({
@@ -38,6 +40,8 @@ export const StockOutView: React.FC<StockOutViewProps> = ({
     ALLOWED_OPERATORS.includes(defaultPersonName) ? defaultPersonName : ALLOWED_OPERATORS[0]
   );
   const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (preselectedItemId) setItemId(preselectedItemId);
@@ -82,19 +86,26 @@ export const StockOutView: React.FC<StockOutViewProps> = ({
     return '';
   }, [selectedItem, metrics, qtyNum, effectiveSource, activeCustomerId, custBalance]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItem) return;
-    const ok = onSubmitStockOut({
-      itemId: selectedItem.id,
-      quantity: qtyNum,
-      personName,
-      source: effectiveSource,
-      customerId: effectiveSource === 'customer_allocation' ? activeCustomerId || undefined : undefined,
-      notes,
-    });
-    if (ok) {
-      setNotes('');
+    setSubmitting(true);
+    try {
+      const ok = await onSubmitStockOut({
+        itemId: selectedItem.id,
+        quantity: qtyNum,
+        personName,
+        source: effectiveSource,
+        customerId: effectiveSource === 'customer_allocation' ? activeCustomerId || undefined : undefined,
+        notes,
+        photoFile: photoFile || undefined,
+      });
+      if (ok) {
+        setNotes('');
+        setPhotoFile(null);
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -240,6 +251,7 @@ export const StockOutView: React.FC<StockOutViewProps> = ({
               className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none focus:border-[#46dafd]"
             />
           </div>
+          <MovementPhotoField file={photoFile} onChange={setPhotoFile} />
         </div>
 
         {validationError && (
@@ -254,10 +266,11 @@ export const StockOutView: React.FC<StockOutViewProps> = ({
 
         <button
           type="submit"
-          className="shine-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#1677FF] to-[#0ea5e9] text-sm font-bold text-white shadow-lg"
+          disabled={submitting}
+          className="shine-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-[#1677FF] to-[#0ea5e9] text-sm font-bold text-white shadow-lg disabled:cursor-wait disabled:opacity-70"
         >
           <span className="material-symbols-outlined text-[20px]">outbox</span>
-          تأكيد الصرف
+          {submitting ? 'جارٍ حفظ العملية...' : 'تأكيد الصرف'}
         </button>
       </form>
 

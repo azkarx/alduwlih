@@ -4,6 +4,7 @@ import { ALLOWED_OPERATORS } from '../data/seedData';
 import type { AccessoryItem, OperatorName, WarehouseState } from '../types/warehouse';
 import { computeAllItemMetrics } from '../utils/warehouseLogic';
 import { ConfirmModal, formatNum, OperatorSelector, StockStatusTag } from './UiShared';
+import { MovementPhotoField } from './MovementPhotoField';
 
 const UNIT_SUGGESTIONS = ['قطعة', 'زرار', 'بكرة', 'متر', 'طقم', 'كرتونة', 'كيلو'];
 
@@ -14,8 +15,9 @@ interface ItemsViewProps {
   onCreateItem: (
     input: Omit<AccessoryItem, 'id' | 'createdAt' | 'updatedAt'>,
     personName: string,
-    customerId?: string
-  ) => boolean;
+    customerId?: string,
+    photoFile?: File
+  ) => Promise<boolean>;
   onUpdateItem: (
     itemId: string,
     updates: Partial<Omit<AccessoryItem, 'id' | 'createdAt'>>,
@@ -47,6 +49,8 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   const [assignMode, setAssignMode] = useState<'free' | 'customer'>('free');
   const [customerId, setCustomerId] = useState(state.customers[0]?.id || '');
   const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
   const [formOperator, setFormOperator] = useState<OperatorName>(
     ALLOWED_OPERATORS.includes(defaultPersonName) ? defaultPersonName : ALLOWED_OPERATORS[0]
   );
@@ -63,14 +67,14 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setFormOpen(false);
+        if (!formSubmitting) setFormOpen(false);
         setAdjustTarget(null);
         setDeleteTarget(null);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [formSubmitting]);
 
   const duplicateItemError = useMemo(() => {
     const cleanSku = sku.trim().toUpperCase();
@@ -111,6 +115,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     setAssignMode('free');
     setCustomerId(state.customers[0]?.id || '');
     setNotes('');
+    setPhotoFile(null);
     setFormOperator(
       ALLOWED_OPERATORS.includes(defaultPersonName) ? defaultPersonName : ALLOWED_OPERATORS[0]
     );
@@ -126,50 +131,60 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     setMinThreshold(item.minThreshold);
     setAssignMode('free');
     setNotes(item.notes || '');
+    setPhotoFile(null);
     setFormOperator(
       ALLOWED_OPERATORS.includes(defaultPersonName) ? defaultPersonName : ALLOWED_OPERATORS[0]
     );
     setFormOpen(true);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUnit = unit.trim() || 'قطعة';
-    if (editingItem) {
-      const ok = onUpdateItem(
-        editingItem.id,
-        {
-          sku,
-          name,
-          unit: cleanUnit,
-          physicalStock,
-          minThreshold,
-          notes,
-        },
-        formOperator
-      );
-      if (ok) setFormOpen(false);
-    } else {
-      const selectedCustId =
-        assignMode === 'customer' ? customerId || state.customers[0]?.id : undefined;
-      const ok = onCreateItem(
-        {
-          sku,
-          barcode: '',
-          name,
-          category: 'عام',
-          unit: cleanUnit,
-          color: '',
-          sizeSpec: '',
-          rack: '-',
-          physicalStock,
-          minThreshold,
-          notes,
-        },
-        formOperator,
-        selectedCustId
-      );
-      if (ok) setFormOpen(false);
+    setFormSubmitting(true);
+    try {
+      if (editingItem) {
+        const ok = onUpdateItem(
+          editingItem.id,
+          {
+            sku,
+            name,
+            unit: cleanUnit,
+            physicalStock,
+            minThreshold,
+            notes,
+          },
+          formOperator
+        );
+        if (ok) setFormOpen(false);
+      } else {
+        const selectedCustId =
+          assignMode === 'customer' ? customerId || state.customers[0]?.id : undefined;
+        const ok = await onCreateItem(
+          {
+            sku,
+            barcode: '',
+            name,
+            category: 'عام',
+            unit: cleanUnit,
+            color: '',
+            sizeSpec: '',
+            rack: '-',
+            physicalStock,
+            minThreshold,
+            notes,
+          },
+          formOperator,
+          selectedCustId,
+          photoFile || undefined
+        );
+        if (ok) {
+          setFormOpen(false);
+          setPhotoFile(null);
+        }
+      }
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -340,7 +355,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.16 }}
             onMouseDown={(e) => {
-              if (e.target === e.currentTarget) setFormOpen(false);
+              if (e.target === e.currentTarget && !formSubmitting) setFormOpen(false);
             }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
             role="dialog"
@@ -361,6 +376,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setFormOpen(false)}
+                  disabled={formSubmitting}
                   aria-label="إغلاق"
                   className="rounded-lg p-1 text-[#8FA6C3] hover:bg-white/10 hover:text-white active:scale-90"
                 >
@@ -521,6 +537,9 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                     className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none transition-all duration-150 hover:border-white/30 focus:border-[#46dafd]"
                   />
                 </div>
+                {!editingItem && (
+                  <MovementPhotoField file={photoFile} onChange={setPhotoFile} />
+                )}
                 {duplicateItemError && (
                   <div
                     role="alert"
@@ -536,16 +555,17 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setFormOpen(false)}
+                  disabled={formSubmitting}
                   className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-[#d7e3fc] hover:border-white/30 hover:bg-white/10 active:scale-95"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  disabled={Boolean(duplicateItemError)}
+                  disabled={Boolean(duplicateItemError) || formSubmitting}
                   className="shine-cta rounded-xl bg-[#1677FF] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2F86FF] disabled:opacity-45"
                 >
-                  {editingItem ? 'حفظ' : 'إضافة'}
+                  {formSubmitting ? 'جارٍ حفظ العملية...' : editingItem ? 'حفظ' : 'إضافة'}
                 </button>
               </div>
             </motion.form>

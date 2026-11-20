@@ -78,6 +78,7 @@ export interface MovementRecord {
   counterpartyName?: string;
   source?: StockOutSource;
   notes?: string;
+  photoPath?: string;
   createdAt: string;
 }
 

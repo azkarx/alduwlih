@@ -21,6 +21,11 @@ export const WelcomeIntro: React.FC<WelcomeIntroProps> = ({
   const isDalia = persona === 'dalia';
   const avatarSrc = USER_AVATARS[persona];
   const isLogout = mode === 'logout';
+  const introName = user?.role === 'admin'
+    ? 'محمد رضا'
+    : user?.role === 'manager'
+      ? 'داليا محمد'
+      : user?.name || '';
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [readySrc, setReadySrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -69,7 +74,7 @@ export const WelcomeIntro: React.FC<WelcomeIntroProps> = ({
     };
   }, [user, imgReady, isLogout, onComplete]);
 
-  const greeting = user ? getWelcomeGreeting(user.name, mode) : null;
+  const greeting = user ? getWelcomeGreeting(introName, mode) : null;
 
   return (
     <AnimatePresence>
@@ -133,7 +138,7 @@ export const WelcomeIntro: React.FC<WelcomeIntroProps> = ({
                     key={avatarSrc}
                     ref={imgRef}
                     src={avatarSrc}
-                    alt={user.name}
+                    alt={introName}
                     loading="eager"
                     decoding="sync"
                     referrerPolicy="no-referrer"
@@ -211,8 +216,8 @@ export const WelcomeIntro: React.FC<WelcomeIntroProps> = ({
               }`}
             >
               {isLogout
-                ? `${user.name} · ${warehouseName} — نراك قريباً`
-                : `${user.name} · ${warehouseName}`}
+                ? `${introName} · ${warehouseName} — نراك قريباً`
+                : `${introName} · ${warehouseName}`}
             </motion.p>
 
             {/* Sleek Progress Bar */}

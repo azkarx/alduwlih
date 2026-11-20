@@ -1,10 +1,59 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createInitialWarehouseState } from '../data/seedData';
-import type { WarehouseState, WarehouseUser, WarehouseSettings } from '../types/warehouse';
+import type { UserRole, WarehouseState, WarehouseUser, WarehouseSettings } from '../types/warehouse';
+import { getMovementPhotoError, getMovementPhotoExtension } from '../utils/movementPhoto';
 
 const LOCAL_STORAGE_KEY = 'dawliya_warehouse_state_v2';
 const LEGACY_SESSION_STORAGE_KEY = 'dawliya_warehouse_session_v2';
 const LEGACY_REMEMBERED_ACCOUNTS_KEY = 'dawliya_remembered_accounts_v2';
+const QUICK_LOGIN_ACCOUNTS_KEY = 'dawliya_quick_login_accounts_v1';
+
+export interface RememberedLoginAccount {
+  email: string;
+  name: string;
+  role: UserRole;
+}
+
+function isRememberedLoginAccount(value: unknown): value is RememberedLoginAccount {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    'email' in value &&
+    typeof value.email === 'string' &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'role' in value &&
+    (value.role === 'admin' || value.role === 'manager')
+  );
+}
+
+export function loadRememberedLoginAccounts(): RememberedLoginAccount[] {
+  const raw = window.localStorage.getItem(QUICK_LOGIN_ACCOUNTS_KEY);
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    window.localStorage.removeItem(QUICK_LOGIN_ACCOUNTS_KEY);
+    return [];
+  }
+  return Array.isArray(parsed) ? parsed.filter(isRememberedLoginAccount).slice(0, 6) : [];
+}
+
+export function rememberLoginAccount(user: Pick<WarehouseUser, 'email' | 'name' | 'role'>): void {
+  const email = user.email.trim().toLowerCase();
+  if (!email) throw new Error('لا يوجد بريد إلكتروني صالح لحفظه.');
+
+  const account: RememberedLoginAccount = {
+    email,
+    name: user.name,
+    role: user.role,
+  };
+  const accounts = loadRememberedLoginAccounts().filter(
+    (savedAccount) => savedAccount.email.toLowerCase() !== email
+  );
+  window.localStorage.setItem(QUICK_LOGIN_ACCOUNTS_KEY, JSON.stringify([account, ...accounts].slice(0, 6)));
+}
 
 export interface SupabaseSyncStatus {
   mode: 'supabase' | 'local';
@@ -108,6 +157,50 @@ export function getSupabaseClient(settings?: WarehouseSettings): SupabaseClient 
     settings?.supabaseUrl || envCfg.url,
     settings?.supabaseAnonKey || envCfg.anonKey
   );
+}
+
+const MOVEMENT_PHOTOS_BUCKET = 'warehouse-movement-photos';
+
+export async function uploadMovementPhoto(
+  file: File,
+  movementId: string,
+  settings: WarehouseSettings
+): Promise<string> {
+  const validationError = getMovementPhotoError(file);
+  if (validationError) throw new Error(validationError);
+
+  const extension = getMovementPhotoExtension(file.type);
+  const client = getSupabaseClient(settings);
+  if (!extension || !client) {
+    throw new Error('إعدادات تخزين صور الحركات غير مكتملة.');
+  }
+
+  const { data, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!data.session?.user) throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+
+  const path = `${data.session.user.id}/${movementId}.${extension}`;
+  const { error } = await client.storage.from(MOVEMENT_PHOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    contentType: file.type,
+    upsert: false,
+  });
+  if (error) throw new Error(`تعذر رفع صورة الحركة: ${error.message}`);
+  return path;
+}
+
+export async function createMovementPhotoSignedUrl(
+  path: string,
+  settings: WarehouseSettings
+): Promise<string> {
+  const client = getSupabaseClient(settings);
+  if (!client) throw new Error('إعدادات Supabase غير مكتملة.');
+
+  const { data, error } = await client.storage
+    .from(MOVEMENT_PHOTOS_BUCKET)
+    .createSignedUrl(path, 60 * 60);
+  if (error) throw new Error(`تعذر فتح صورة الحركة: ${error.message}`);
+  return data.signedUrl;
 }
 
 const SUPABASE_SCHEMA_READY_KEY = 'dawliya_supabase_schema_ready_v1';
@@ -457,6 +550,7 @@ export async function syncStateToSupabase(
           counterparty_name: m.counterpartyName || null,
           source: m.source || null,
           notes: m.notes || '',
+          photo_path: m.photoPath || null,
           created_at: m.createdAt,
         })),
         { onConflict: 'id' }
@@ -617,6 +711,7 @@ export async function pullStateFromSupabase(
         counterpartyName: r.counterparty_name || undefined,
         source: r.source || undefined,
         notes: String(r.notes || ''),
+        photoPath: r.photo_path ? String(r.photo_path) : undefined,
         createdAt: String(r.created_at || new Date().toISOString()),
       })),
       users: (profilesRes.data || []).map((r) =>

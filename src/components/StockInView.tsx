@@ -3,6 +3,7 @@ import { ALLOWED_OPERATORS } from '../data/seedData';
 import type { AccessoryItem, OperatorName, WarehouseState } from '../types/warehouse';
 import { computeItemMetrics, getCustomerAllocationQty } from '../utils/warehouseLogic';
 import { formatNum, OperatorSelector } from './UiShared';
+import { MovementPhotoField } from './MovementPhotoField';
 
 const UNIT_SUGGESTIONS = ['زرار', 'قطعة', 'بكرة', 'متر', 'طقم', 'كرتونة', 'كيلو'];
 
@@ -17,12 +18,14 @@ interface StockInViewProps {
     customerId?: string;
     supplierName?: string;
     notes?: string;
-  }) => boolean;
+    photoFile?: File;
+  }) => Promise<boolean>;
   onCreateAndStockIn: (
     input: Omit<AccessoryItem, 'id' | 'createdAt' | 'updatedAt'>,
     personName: string,
-    customerId?: string
-  ) => boolean;
+    customerId?: string,
+    photoFile?: File
+  ) => Promise<boolean>;
 }
 
 export const StockInView: React.FC<StockInViewProps> = ({
@@ -54,6 +57,8 @@ export const StockInView: React.FC<StockInViewProps> = ({
   const [assignType, setAssignType] = useState<'general' | 'customer'>('general');
   const [customerId, setCustomerId] = useState(state.customers[0]?.id || '');
   const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const effectiveMode = state.items.length === 0 ? 'new' : entryMode;
   const selectedItem = state.items.find((i) => i.id === itemId) || state.items[0];
@@ -86,47 +91,56 @@ export const StockInView: React.FC<StockInViewProps> = ({
     return '';
   }, [effectiveMode, newSku, newName, state.items]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (duplicateNewItemError) return;
     const targetCustId = effectiveAssignType === 'customer' ? activeCustomerId || undefined : undefined;
+    setSubmitting(true);
 
-    if (effectiveMode === 'new') {
-      const ok = onCreateAndStockIn(
-        {
-          name: newName,
-          sku: newSku,
-          unit: newUnit.trim() || 'قطعة',
-          minThreshold: newMinThreshold,
-          physicalStock: newStockNum,
-          category: 'عام',
-          barcode: '',
-          color: '',
-          sizeSpec: '',
-          rack: '-',
-          notes: notes.trim() || undefined,
-        },
-        personName,
-        targetCustId
-      );
-      if (ok) {
-        setNewName('');
-        setNewSku('');
-        setNotes('');
+    try {
+      if (effectiveMode === 'new') {
+        const ok = await onCreateAndStockIn(
+          {
+            name: newName,
+            sku: newSku,
+            unit: newUnit.trim() || 'قطعة',
+            minThreshold: newMinThreshold,
+            physicalStock: newStockNum,
+            category: 'عام',
+            barcode: '',
+            color: '',
+            sizeSpec: '',
+            rack: '-',
+            notes: notes.trim() || undefined,
+          },
+          personName,
+          targetCustId,
+          photoFile || undefined
+        );
+        if (ok) {
+          setNewName('');
+          setNewSku('');
+          setNotes('');
+          setPhotoFile(null);
+        }
+        return;
       }
-      return;
-    }
 
-    if (!selectedItem) return;
-    const ok = onSubmitStockIn({
-      itemId: selectedItem.id,
-      quantity: qtyNum,
-      personName,
-      customerId: targetCustId,
-      notes,
-    });
-    if (ok) {
-      setNotes('');
+      if (!selectedItem) return;
+      const ok = await onSubmitStockIn({
+        itemId: selectedItem.id,
+        quantity: qtyNum,
+        personName,
+        customerId: targetCustId,
+        notes,
+        photoFile: photoFile || undefined,
+      });
+      if (ok) {
+        setNotes('');
+        setPhotoFile(null);
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -395,14 +409,16 @@ export const StockInView: React.FC<StockInViewProps> = ({
               className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none focus:border-[#46dafd]"
             />
           </div>
+          <MovementPhotoField file={photoFile} onChange={setPhotoFile} />
         </div>
 
         <button
           type="submit"
-          className="shine-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#10B981] text-sm font-bold text-[#002113] shadow-lg hover:bg-[#34d399]"
+          disabled={submitting}
+          className="shine-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#10B981] text-sm font-bold text-[#002113] shadow-lg hover:bg-[#34d399] disabled:cursor-wait disabled:opacity-70"
         >
           <span className="material-symbols-outlined text-[20px]">add_box</span>
-          {effectiveMode === 'new' ? 'إضافة الصنف والرصيد' : 'تأكيد الإضافة'}
+          {submitting ? 'جارٍ حفظ العملية...' : effectiveMode === 'new' ? 'إضافة الصنف والرصيد' : 'تأكيد الإضافة'}
         </button>
       </form>
 

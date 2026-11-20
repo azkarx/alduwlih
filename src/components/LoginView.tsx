@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
 import warehouseLogoImg from '../assets/images/alduwlih_emblem_logo_1795096287883.jpg';
+import { loadRememberedLoginAccounts, type RememberedLoginAccount } from '../services/storageService';
 import type { WarehouseSettings } from '../types/warehouse';
+import { USER_AVATARS } from '../utils/userAvatars';
 
 interface LoginViewProps {
   settings: WarehouseSettings;
@@ -16,10 +18,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ settings, initialError, on
   const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<RememberedLoginAccount[]>([]);
+  const [accountLoadError, setAccountLoadError] = useState('');
 
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
+
+  useEffect(() => {
+    try {
+      setSavedAccounts(loadRememberedLoginAccounts());
+    } catch {
+      setAccountLoadError('تعذر قراءة الحسابات المحفوظة من هذا الجهاز.');
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +77,56 @@ export const LoginView: React.FC<LoginViewProps> = ({ settings, initialError, on
           </h1>
           <p className="mt-1 text-[13px] text-[#8FA6C3]">{settings.warehouseSubtitle}</p>
         </div>
+
+        {savedAccounts.length > 0 && (
+          <div className="glass-card space-y-3 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-white">
+                <span className="material-symbols-outlined text-[18px] text-[#46dafd]">bolt</span>
+                الدخول السريع
+              </h2>
+              <span className="text-[11px] text-[#8FA6C3]">الحسابات المسجلة على هذا الجهاز</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {savedAccounts.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setEmail(account.email);
+                    setPassword('');
+                    setError('');
+                  }}
+                  className="flex min-w-0 items-center gap-2.5 rounded-xl border border-white/10 bg-[#071426]/55 p-2.5 text-right transition-colors hover:border-[#46dafd]/45 hover:bg-[#1677FF]/10 disabled:opacity-60"
+                >
+                  <img
+                    src={USER_AVATARS[account.role === 'admin' ? 'mohamed' : 'dalia']}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-full border border-white/15 object-cover"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-bold text-white">
+                      {account.name}
+                    </span>
+                    <span className="block truncate text-[10px] text-[#8FA6C3]" dir="ltr">
+                      {account.email}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] text-[#46dafd]">
+                      {account.role === 'admin' ? 'أدخل كلمة مرور المدير' : 'أدخل كلمة المرور'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {accountLoadError && (
+          <p role="status" className="text-center text-xs text-[#fcd34d]">
+            {accountLoadError}
+          </p>
+        )}
 
         <motion.form
           initial={{ opacity: 0, y: 12 }}
