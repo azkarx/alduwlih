@@ -4,6 +4,19 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+function copyDirectory(source: string, destination: string): void {
+  fs.mkdirSync(destination, {recursive: true});
+  for (const entry of fs.readdirSync(source, {withFileTypes: true})) {
+    const sourcePath = path.join(source, entry.name);
+    const destinationPath = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectory(sourcePath, destinationPath);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sourcePath, destinationPath);
+    }
+  }
+}
+
 export default defineConfig(({command}) => {
   return {
     base: command === 'build' ? './' : '/',
@@ -20,18 +33,18 @@ export default defineConfig(({command}) => {
           if (error) {
             return;
           }
-          const distDir = path.resolve(__dirname, 'dist');
-          const srcAssets = path.resolve(__dirname, 'src/assets');
+          const distDir = path.resolve(import.meta.dirname, 'dist');
+          const srcAssets = path.resolve(import.meta.dirname, 'src/assets');
           const distAssets = path.resolve(distDir, 'src/assets');
           if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
-            fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
+            copyDirectory(srcAssets, distAssets);
           }
         },
       },
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     server: {

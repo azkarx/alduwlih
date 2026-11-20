@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertsView } from './components/AlertsView';
+import { ChatWidget } from './components/ChatWidget';
 import { CustomersView } from './components/CustomersView';
 import { DaliaPortal } from './components/DaliaPortal';
 import { DashboardView } from './components/DashboardView';
@@ -85,6 +86,11 @@ export default function App() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
   }, []);
+
+  const handleChatIncoming = useCallback(
+    (peerName: string) => notify('info', `رسالة جديدة من ${peerName}.`),
+    [notify]
+  );
 
   const commitState = useCallback(
     (
@@ -653,6 +659,13 @@ export default function App() {
           </motion.div>
         )}
 
+        {currentUser && (
+          <ChatWidget
+            user={currentUser}
+            settings={state.settings}
+            onIncoming={handleChatIncoming}
+          />
+        )}
       <WelcomeIntro
         user={introState?.user ?? null}
         mode={introState?.mode ?? 'login'}

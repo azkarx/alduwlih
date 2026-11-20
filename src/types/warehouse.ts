@@ -93,6 +93,15 @@ export interface WarehouseUser {
   lastLoginAt?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
 export interface WarehouseSettings {
   warehouseName: string;
   warehouseSubtitle: string;
