@@ -42,6 +42,7 @@ export const StockInView: React.FC<StockInViewProps> = ({
   // Mode: New Item + Stock
   const [newName, setNewName] = useState('');
   const [newSku, setNewSku] = useState('');
+  const [newCategory, setNewCategory] = useState(state.settings.categories[0] || 'عام');
   const [newUnit, setNewUnit] = useState('قطعة');
   const [newMinThreshold, setNewMinThreshold] = useState<number>(state.settings.defaultMinThreshold);
   const [newPhysicalStock, setNewPhysicalStock] = useState<number>(2000);
@@ -106,7 +107,7 @@ export const StockInView: React.FC<StockInViewProps> = ({
             unit: newUnit.trim() || 'قطعة',
             minThreshold: newMinThreshold,
             physicalStock: newStockNum,
-            category: 'عام',
+            category: newCategory,
             barcode: '',
             color: '',
             sizeSpec: '',
@@ -222,6 +223,28 @@ export const StockInView: React.FC<StockInViewProps> = ({
                 placeholder="BTN-PRL-01"
                 className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 font-mono text-sm text-white outline-none focus:border-[#46dafd]"
               />
+            </div>
+
+            <div>
+              <label htmlFor="in-new-category" className="mb-1.5 block text-[12px] font-semibold text-[#c1c6d7]">
+                الفئة *
+              </label>
+              <select
+                id="in-new-category"
+                required
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none focus:border-[#46dafd]"
+              >
+                {state.settings.categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+                {state.settings.categories.length === 0 && (
+                  <option value={newCategory}>{newCategory}</option>
+                )}
+              </select>
             </div>
 
             <div>

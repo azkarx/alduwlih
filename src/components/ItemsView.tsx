@@ -45,6 +45,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   const [editingItem, setEditingItem] = useState<AccessoryItem | null>(null);
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
+  const [category, setCategory] = useState(state.settings.categories[0] || 'عام');
   const [unit, setUnit] = useState('قطعة');
   const [physicalStock, setPhysicalStock] = useState<number>(0);
   const [minThreshold, setMinThreshold] = useState<number>(state.settings.defaultMinThreshold);
@@ -111,6 +112,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     setEditingItem(null);
     setSku('');
     setName('');
+    setCategory(state.settings.categories[0] || 'عام');
     setUnit('قطعة');
     setPhysicalStock(0);
     setMinThreshold(state.settings.defaultMinThreshold);
@@ -128,6 +130,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     setEditingItem(item);
     setSku(item.sku);
     setName(item.name);
+    setCategory(item.category);
     setUnit(item.unit);
     setPhysicalStock(item.physicalStock);
     setMinThreshold(item.minThreshold);
@@ -151,6 +154,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
           {
             sku,
             name,
+            category,
             unit: cleanUnit,
             physicalStock,
             minThreshold,
@@ -171,7 +175,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
             sku,
             barcode: '',
             name,
-            category: 'عام',
+            category,
             unit: cleanUnit,
             color: '',
             sizeSpec: '',
@@ -431,6 +435,28 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                     placeholder="BTN-PRL-01"
                     className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 font-mono text-sm text-white outline-none transition-all duration-150 hover:border-white/30 focus:border-[#46dafd]"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="item-category" className="mb-1 block text-[12px] font-semibold text-[#c1c6d7]">
+                    الفئة *
+                  </label>
+                  <select
+                    id="item-category"
+                    required
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none transition-all duration-150 hover:border-white/30 focus:border-[#46dafd]"
+                  >
+                    {state.settings.categories.map((itemCategory) => (
+                      <option key={itemCategory} value={itemCategory}>
+                        {itemCategory}
+                      </option>
+                    ))}
+                    {!state.settings.categories.includes(category) && (
+                      <option value={category}>{category}</option>
+                    )}
+                  </select>
                 </div>
 
                 <div>
