@@ -50,8 +50,14 @@ export function buildMovementChartData(
 
     const bucket = bucketsByDate.get(localDateKey(timestamp));
     if (!bucket) continue;
-    if (movement.type === 'stock_in') bucket.inQty += Math.abs(movement.quantityDelta);
-    if (movement.type === 'stock_out') bucket.outQty += Math.abs(movement.quantityDelta);
+    if (movement.type === 'stock_in' || movement.type === 'item_create') {
+      bucket.inQty += Math.abs(movement.quantityDelta);
+    } else if (movement.type === 'stock_out' || movement.type === 'item_delete') {
+      bucket.outQty += Math.abs(movement.quantityDelta);
+    } else if (movement.type === 'adjustment') {
+      if (movement.quantityDelta > 0) bucket.inQty += movement.quantityDelta;
+      if (movement.quantityDelta < 0) bucket.outQty += Math.abs(movement.quantityDelta);
+    }
   }
 
   return buckets;

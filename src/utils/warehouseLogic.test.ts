@@ -51,16 +51,20 @@ test('builds seven local-day chart buckets and counts only stock-in/out movement
   });
   const movements: WarehouseState['movements'] = [
     makeMovement('in-today', 'stock_in', 25, today.toISOString()),
+    makeMovement('create-today', 'item_create', 1700, today.toISOString()),
     makeMovement('out-yesterday', 'stock_out', -8, yesterday.toISOString()),
-    makeMovement('adjustment-today', 'adjustment', 50, today.toISOString()),
+    makeMovement('adjustment-in-today', 'adjustment', 5, today.toISOString()),
+    makeMovement('adjustment-out-today', 'adjustment', -7, today.toISOString()),
+    makeMovement('delete-today', 'item_delete', -3, today.toISOString()),
+    makeMovement('allocation-today', 'allocation', 50, today.toISOString()),
     makeMovement('in-outside', 'stock_in', 99, outsideRange.toISOString()),
   ];
 
   const days = buildMovementChartData(movements, now);
   assert.equal(days.length, 7);
   assert.equal(days[6].key, `${now.getFullYear()}-11-20`);
-  assert.equal(days[6].inQty, 25);
-  assert.equal(days[6].outQty, 0);
+  assert.equal(days[6].inQty, 1730);
+  assert.equal(days[6].outQty, 10);
   assert.equal(days[5].outQty, 8);
   assert.equal(days[0].inQty, 0);
 });
