@@ -282,9 +282,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
       {open && (
         <section
           aria-label={`محادثة خاصة مع ${peer?.name || peerDisplayName}`}
-          className="glass-card absolute bottom-16 left-0 flex h-[min(620px,calc(100vh-7rem))] w-[calc(100vw-2.5rem)] max-w-[420px] flex-col overflow-hidden rounded-2xl border border-white/15 shadow-2xl"
+          className="chat-glass-panel absolute bottom-16 left-0 flex h-[min(620px,calc(100vh-7rem))] w-[calc(100vw-2.5rem)] max-w-[420px] flex-col overflow-hidden rounded-2xl"
         >
-          <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3">
+          <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.05] px-4 py-3 backdrop-blur-xl">
             <div className="flex min-w-0 items-center gap-2.5">
               <img
                 src={peerAvatar}
@@ -407,7 +407,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
             <div ref={bottomRef} />
           </div>
 
-          <form onSubmit={(event) => void sendMessage(event)} className="border-t border-white/10 p-3">
+          <form
+            onSubmit={(event) => void sendMessage(event)}
+            className="border-t border-white/10 bg-white/[0.03] p-3 backdrop-blur-xl"
+          >
             <div className="flex items-end gap-2">
               <textarea
                 value={draft}
@@ -422,7 +425,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ user, settings, onIncomi
                 rows={2}
                 placeholder="اكتب رسالتك..."
                 aria-label="نص الرسالة"
-                className="max-h-32 min-h-11 flex-1 resize-y rounded-xl border border-white/10 bg-[#071426]/70 px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#7789a3] focus:border-[#46dafd]/60"
+                className="max-h-32 min-h-11 flex-1 resize-y rounded-xl border border-white/15 bg-[#071426]/45 px-3 py-2.5 text-sm text-white outline-none backdrop-blur-xl placeholder:text-[#7789a3] focus:border-[#46dafd]/60"
               />
               <button
                 type="submit"

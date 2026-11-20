@@ -94,6 +94,16 @@
     box-shadow: 0 10px 32px rgba(2, 8, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
+  .chat-glass-panel {
+    background: rgba(9, 24, 44, 0.62);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(214, 231, 255, 0.2);
+    box-shadow:
+      0 20px 56px rgba(1, 8, 20, 0.58),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
   .glass-card-interactive {
     background: rgba(16, 41, 71, 0.56);
     backdrop-filter: blur(16px);
