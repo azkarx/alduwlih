@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { createMovementPhotoSignedUrl } from '../services/storageService';
+import { createStoredPhotoSignedUrl } from '../services/storageService';
 import type { MovementType, ReportPreset, WarehouseState } from '../types/warehouse';
 import { filterMovementsByDateRange } from '../utils/warehouseLogic';
 import { formatDateTime, formatNum, movementMeta } from './UiShared';
@@ -25,7 +25,7 @@ export const MovementsView: React.FC<MovementsViewProps> = ({ state }) => {
     const requestId = ++photoRequestId.current;
     setPhotoDialog({ loading: true });
     try {
-      const url = await createMovementPhotoSignedUrl(path, state.settings);
+      const url = await createStoredPhotoSignedUrl(path, state.settings);
       if (requestId === photoRequestId.current) setPhotoDialog({ url, loading: false });
     } catch (error) {
       if (requestId === photoRequestId.current) {

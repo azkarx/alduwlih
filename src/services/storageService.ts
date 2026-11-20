@@ -159,7 +159,7 @@ export function getSupabaseClient(settings?: WarehouseSettings): SupabaseClient 
   );
 }
 
-const MOVEMENT_PHOTOS_BUCKET = 'warehouse-movement-photos';
+const WAREHOUSE_PHOTOS_BUCKET = 'warehouse-movement-photos';
 
 export async function uploadMovementPhoto(
   file: File,
@@ -180,7 +180,7 @@ export async function uploadMovementPhoto(
   if (!data.session?.user) throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
 
   const path = `${data.session.user.id}/${movementId}.${extension}`;
-  const { error } = await client.storage.from(MOVEMENT_PHOTOS_BUCKET).upload(path, file, {
+  const { error } = await client.storage.from(WAREHOUSE_PHOTOS_BUCKET).upload(path, file, {
     cacheControl: '3600',
     contentType: file.type,
     upsert: false,
@@ -189,7 +189,35 @@ export async function uploadMovementPhoto(
   return path;
 }
 
-export async function createMovementPhotoSignedUrl(
+export async function uploadItemPhoto(
+  file: File,
+  itemId: string,
+  settings: WarehouseSettings
+): Promise<string> {
+  const validationError = getMovementPhotoError(file);
+  if (validationError) throw new Error(validationError);
+
+  const extension = getMovementPhotoExtension(file.type);
+  const client = getSupabaseClient(settings);
+  if (!extension || !client) {
+    throw new Error('إعدادات تخزين صور الأصناف غير مكتملة.');
+  }
+
+  const { data, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!data.session?.user) throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+
+  const path = `${data.session.user.id}/items/${itemId}`;
+  const { error } = await client.storage.from(WAREHOUSE_PHOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    contentType: file.type,
+    upsert: true,
+  });
+  if (error) throw new Error(`تعذر رفع صورة الصنف: ${error.message}`);
+  return path;
+}
+
+export async function createStoredPhotoSignedUrl(
   path: string,
   settings: WarehouseSettings
 ): Promise<string> {
@@ -197,9 +225,9 @@ export async function createMovementPhotoSignedUrl(
   if (!client) throw new Error('إعدادات Supabase غير مكتملة.');
 
   const { data, error } = await client.storage
-    .from(MOVEMENT_PHOTOS_BUCKET)
+    .from(WAREHOUSE_PHOTOS_BUCKET)
     .createSignedUrl(path, 60 * 60);
-  if (error) throw new Error(`تعذر فتح صورة الحركة: ${error.message}`);
+  if (error) throw new Error(`تعذر فتح الصورة: ${error.message}`);
   return data.signedUrl;
 }
 
@@ -408,7 +436,7 @@ export async function testSupabaseConnection(
 
 export async function syncStateToSupabase(
   state: WarehouseState,
-  options?: { force?: boolean; allowDeletes?: boolean }
+  options?: { force?: boolean; allowDeletes?: boolean; clearMovements?: boolean }
 ): Promise<SupabaseSyncStatus> {
   const envCfg = getEnvSupabaseConfig();
   const url = state.settings.supabaseUrl || envCfg.url;
@@ -458,6 +486,7 @@ export async function syncStateToSupabase(
           rack: item.rack,
           physical_stock: item.physicalStock,
           min_threshold: item.minThreshold,
+          photo_path: item.photoPath || null,
           notes: item.notes || '',
           created_at: item.createdAt,
           updated_at: item.updatedAt,
@@ -532,6 +561,14 @@ export async function syncStateToSupabase(
       }
     }
 
+    if (options?.clearMovements) {
+      const { error: clearMovementsError } = await client
+        .from('movements')
+        .delete()
+        .not('id', 'is', null);
+      if (clearMovementsError) throw clearMovementsError;
+    }
+
     if (state.movements.length > 0) {
       const { error: movErr } = await client.from('movements').upsert(
         state.movements.slice(0, 500).map((m) => ({
@@ -580,7 +617,8 @@ export async function syncStateToSupabase(
 }
 
 export async function pullStateFromSupabase(
-  currentState: WarehouseState
+  currentState: WarehouseState,
+  options?: { allowLocalMigration?: boolean }
 ): Promise<{ ok: boolean; state?: WarehouseState; message: string }> {
   const envCfg = getEnvSupabaseConfig();
   const url = currentState.settings.supabaseUrl || envCfg.url;
@@ -618,6 +656,7 @@ export async function pullStateFromSupabase(
     setSchemaVerifiedLocally(true);
 
     if (
+      options?.allowLocalMigration !== false &&
       (itemsRes.data?.length || 0) === 0 &&
       (custRes.data?.length || 0) === 0 &&
       (movRes.data?.length || 0) === 0 &&
@@ -674,6 +713,7 @@ export async function pullStateFromSupabase(
         rack: String(r.rack || ''),
         physicalStock: Number(r.physical_stock || 0),
         minThreshold: Number(r.min_threshold || 0),
+        photoPath: r.photo_path ? String(r.photo_path) : undefined,
         notes: String(r.notes || ''),
         createdAt: String(r.created_at || new Date().toISOString()),
         updatedAt: String(r.updated_at || new Date().toISOString()),

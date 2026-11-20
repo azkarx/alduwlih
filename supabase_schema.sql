@@ -14,10 +14,14 @@ create table if not exists public.items (
   rack text not null default '-',
   physical_stock integer not null default 0 check (physical_stock >= 0),
   min_threshold integer not null default 0 check (min_threshold >= 0),
+  photo_path text,
   notes text default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.items
+  add column if not exists photo_path text;
 
 create table if not exists public.customers (
   id text primary key,
@@ -229,6 +233,7 @@ set public = excluded.public,
 
 drop policy if exists "Active users can read warehouse movement photos" on storage.objects;
 drop policy if exists "Admins can upload warehouse movement photos" on storage.objects;
+drop policy if exists "Admins can update warehouse photos" on storage.objects;
 
 create policy "Active users can read warehouse movement photos" on storage.objects
   for select to authenticated
@@ -239,6 +244,17 @@ create policy "Active users can read warehouse movement photos" on storage.objec
 
 create policy "Admins can upload warehouse movement photos" on storage.objects
   for insert to authenticated
+  with check (
+    bucket_id = 'warehouse-movement-photos'
+    and (select public.current_user_is_admin())
+  );
+
+create policy "Admins can update warehouse photos" on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'warehouse-movement-photos'
+    and (select public.current_user_is_admin())
+  )
   with check (
     bucket_id = 'warehouse-movement-photos'
     and (select public.current_user_is_admin())

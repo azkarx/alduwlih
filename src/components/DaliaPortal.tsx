@@ -6,6 +6,7 @@ import type { StockAlert, WarehouseState, WarehouseUser } from '../types/warehou
 import { USER_AVATARS } from '../utils/userAvatars';
 import { computeAllItemMetrics, computeCustomerBalances } from '../utils/warehouseLogic';
 import { formatDateTime, formatNum, movementMeta } from './UiShared';
+import { StoredPhotoButton } from './StoredPhotoButton';
 
 interface DaliaPortalProps {
   state: WarehouseState;
@@ -21,7 +22,7 @@ export const DaliaPortal: React.FC<DaliaPortalProps> = ({
   state,
   alerts,
   user,
-  syncStatus: _syncStatus,
+  syncStatus,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<DaliaTab>('items');
@@ -114,6 +115,18 @@ export const DaliaPortal: React.FC<DaliaPortalProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
+            <span
+              role="status"
+              title={syncStatus.message}
+              className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] sm:inline-flex ${
+                syncStatus.connected
+                  ? 'border-[#10B981]/30 bg-[#10B981]/10 text-[#6ee7b7]'
+                  : 'border-[#F87171]/30 bg-[#F87171]/10 text-[#fca5a5]'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${syncStatus.connected ? 'bg-[#10B981]' : 'bg-[#F87171]'}`} />
+              {syncStatus.connected ? 'متصل' : 'غير متصل'}
+            </span>
             <div className="flex items-center gap-2 rounded-xl border border-[#f472b6]/25 bg-white/[0.04] px-2.5 py-1.5">
               <img
                 src={USER_AVATARS.dalia}
@@ -344,6 +357,15 @@ export const DaliaPortal: React.FC<DaliaPortalProps> = ({
                           {m.item.color ? ` · ${m.item.color}` : ''}
                           {m.item.sizeSpec ? ` · ${m.item.sizeSpec}` : ''}
                         </p>
+                        {m.item.photoPath && (
+                          <div className="mt-2">
+                            <StoredPhotoButton
+                              path={m.item.photoPath}
+                              settings={state.settings}
+                              label="عرض صورة الصنف"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/10 pt-3 text-center">

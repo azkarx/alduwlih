@@ -5,6 +5,7 @@ import type { AccessoryItem, OperatorName, WarehouseState } from '../types/wareh
 import { computeAllItemMetrics } from '../utils/warehouseLogic';
 import { ConfirmModal, formatNum, OperatorSelector, StockStatusTag } from './UiShared';
 import { MovementPhotoField } from './MovementPhotoField';
+import { StoredPhotoButton } from './StoredPhotoButton';
 
 const UNIT_SUGGESTIONS = ['قطعة', 'زرار', 'بكرة', 'متر', 'طقم', 'كرتونة', 'كيلو'];
 
@@ -21,8 +22,9 @@ interface ItemsViewProps {
   onUpdateItem: (
     itemId: string,
     updates: Partial<Omit<AccessoryItem, 'id' | 'createdAt'>>,
-    personName: string
-  ) => boolean;
+    personName: string,
+    photoFile?: File
+  ) => Promise<boolean>;
   onAdjustBalance: (itemId: string, newStock: number, personName: string, notes: string) => boolean;
   onDeleteItem: (itemId: string, personName: string) => boolean;
 }
@@ -144,7 +146,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     setFormSubmitting(true);
     try {
       if (editingItem) {
-        const ok = onUpdateItem(
+        const ok = await onUpdateItem(
           editingItem.id,
           {
             sku,
@@ -154,9 +156,13 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
             minThreshold,
             notes,
           },
-          formOperator
+          formOperator,
+          photoFile || undefined
         );
-        if (ok) setFormOpen(false);
+        if (ok) {
+          setFormOpen(false);
+          setPhotoFile(null);
+        }
       } else {
         const selectedCustId =
           assignMode === 'customer' ? customerId || state.customers[0]?.id : undefined;
@@ -276,7 +282,18 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                         {m.item.sku}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-white">{m.item.name}</td>
+                    <td className="px-4 py-3 font-semibold text-white">
+                      <div className="flex items-center gap-2">
+                        <span>{m.item.name}</span>
+                        {m.item.photoPath && (
+                          <StoredPhotoButton
+                            path={m.item.photoPath}
+                            settings={state.settings}
+                            label="عرض الصورة"
+                          />
+                        )}
+                      </div>
+                    </td>
                     <td className="tabular-nums px-4 py-3 font-bold text-white">
                       <span className={m.item.physicalStock === 0 ? 'text-[#EF4444]' : ''}>
                         {formatNum(m.item.physicalStock)}
@@ -537,8 +554,20 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                     className="h-10 w-full rounded-xl border border-white/15 bg-[#071426]/65 px-3 text-sm text-white outline-none transition-all duration-150 hover:border-white/30 focus:border-[#46dafd]"
                   />
                 </div>
-                {!editingItem && (
-                  <MovementPhotoField file={photoFile} onChange={setPhotoFile} />
+                <MovementPhotoField
+                  file={photoFile}
+                  onChange={setPhotoFile}
+                  label={editingItem ? 'صورة الصنف' : 'صورة العملية'}
+                />
+                {editingItem?.photoPath && (
+                  <div className="sm:col-span-2 flex items-center gap-2 text-xs text-[#8FA6C3]">
+                    <span>الصورة الحالية:</span>
+                    <StoredPhotoButton
+                      path={editingItem.photoPath}
+                      settings={state.settings}
+                      label="عرض الصورة"
+                    />
+                  </div>
                 )}
                 {duplicateItemError && (
                   <div

@@ -4,9 +4,14 @@ import { getMovementPhotoError } from '../utils/movementPhoto';
 interface MovementPhotoFieldProps {
   file: File | null;
   onChange: (file: File | null) => void;
+  label?: string;
 }
 
-export const MovementPhotoField: React.FC<MovementPhotoFieldProps> = ({ file, onChange }) => {
+export const MovementPhotoField: React.FC<MovementPhotoFieldProps> = ({
+  file,
+  onChange,
+  label = 'صورة العملية',
+}) => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -41,7 +46,7 @@ export const MovementPhotoField: React.FC<MovementPhotoFieldProps> = ({ file, on
   return (
     <div className="sm:col-span-2">
       <span className="mb-1.5 block text-[12px] font-semibold text-[#c1c6d7]">
-        صورة العملية <span className="font-normal text-[#8FA6C3]">(اختياري، حتى 8 ميجابايت)</span>
+        {label} <span className="font-normal text-[#8FA6C3]">(اختياري، حتى 8 ميجابايت)</span>
       </span>
       <input
         ref={cameraInputRef}

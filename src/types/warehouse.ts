@@ -38,6 +38,7 @@ export interface AccessoryItem {
   rack: string;
   physicalStock: number;
   minThreshold: number;
+  photoPath?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;

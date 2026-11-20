@@ -19,12 +19,14 @@ import { ALLOWED_OPERATORS } from './data/seedData';
 import {
   loadLocalWarehouseState,
   getSupabaseClient,
+  pullStateFromSupabase,
   rememberLoginAccount,
   restoreWarehouseSession,
   saveLocalWarehouseState,
   signInToWarehouse,
   signOutFromWarehouse,
   syncStateToSupabase,
+  uploadItemPhoto,
   uploadMovementPhoto,
   type SupabaseSyncStatus,
 } from './services/storageService';
@@ -85,7 +87,10 @@ export default function App() {
   }, []);
 
   const commitState = useCallback(
-    (next: WarehouseState, syncOptions?: { allowDeletes?: boolean }) => {
+    (
+      next: WarehouseState,
+      syncOptions?: { allowDeletes?: boolean; clearMovements?: boolean }
+    ) => {
       setState(next);
       saveLocalWarehouseState(next);
       void syncStateToSupabase(next, syncOptions).then((status) => {
@@ -133,6 +138,48 @@ export default function App() {
     () => (currentUserId ? state.users.find((u) => u.id === currentUserId && u.active) || null : null),
     [state.users, currentUserId]
   );
+
+  useEffect(() => {
+    if (currentUser?.role !== 'manager') return;
+    let active = true;
+    let refreshInProgress = false;
+
+    const refreshWarehouseState = async () => {
+      if (refreshInProgress) return;
+      refreshInProgress = true;
+      try {
+        const result = await pullStateFromSupabase(loadLocalWarehouseState(), {
+          allowLocalMigration: false,
+        });
+        if (!active) return;
+        if (!result.ok || !result.state) {
+          setSyncStatus({ mode: 'local', connected: false, message: result.message });
+          return;
+        }
+        setState(result.state);
+        saveLocalWarehouseState(result.state);
+        setSyncStatus({ mode: 'supabase', connected: true, message: 'متصل بـ Supabase' });
+      } catch (error) {
+        if (active) {
+          setSyncStatus({
+            mode: 'local',
+            connected: false,
+            message: error instanceof Error ? error.message : 'تعذر تحديث بيانات المخزن.',
+          });
+        }
+      } finally {
+        refreshInProgress = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshWarehouseState();
+    }, 15_000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [currentUser?.role]);
 
   const isAdmin = currentUser?.role === 'admin';
   const defaultOperator: OperatorName = ALLOWED_OPERATORS.includes(currentUser?.name as OperatorName)
@@ -225,20 +272,36 @@ export default function App() {
     }
   };
 
-  const handleUpdateItem = (
+  const handleUpdateItem = async (
     itemId: string,
     updates: Partial<Omit<AccessoryItem, 'id' | 'createdAt'>>,
-    personName: string
-  ) => {
+    personName: string,
+    photoFile?: File
+  ): Promise<boolean> => {
     if (!isAdmin) return false;
     const res = updateItemInState(state, itemId, updates, personName);
     if (!res.ok) {
       notify('error', res.error || 'تعذر تحديث الصنف.');
       return false;
     }
-    commitState(res.state);
-    notify('success', 'تم حفظ التعديلات.');
-    return true;
+    try {
+      let nextState = res.state;
+      if (photoFile) {
+        const photoPath = await uploadItemPhoto(photoFile, itemId, state.settings);
+        nextState = {
+          ...res.state,
+          items: res.state.items.map((item) =>
+            item.id === itemId ? { ...item, photoPath } : item
+          ),
+        };
+      }
+      commitState(nextState);
+      notify('success', 'تم حفظ التعديلات.');
+      return true;
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'تعذر حفظ صورة الصنف.');
+      return false;
+    }
   };
 
   const handleAdjustBalance = (
@@ -576,7 +639,10 @@ export default function App() {
                   }}
                   onResetAllData={() => {
                     if (!isAdmin) return;
-                    commitState(clearWarehouseDataKeepConfig(state), { allowDeletes: true });
+                    commitState(clearWarehouseDataKeepConfig(state), {
+                      allowDeletes: true,
+                      clearMovements: true,
+                    });
                     notify('success', 'تم مسح بيانات المخزن بالكامل مع الاحتفاظ بالمستخدمين والإعدادات.');
                   }}
                   onSyncStatusChange={setSyncStatus}
