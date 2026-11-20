@@ -138,16 +138,8 @@ export function subscribeToChat(
   onPresenceError: (error: Error | null) => void
 ): () => void {
   const client = requireSupabaseClient(settings);
-  const channel: RealtimeChannel = client
-    .channel('warehouse-chat-presence', {
-      config: { private: true, presence: { key: userId } },
-    })
-    .on('presence', { event: 'sync' }, () => {
-      const onlineUserIds = Object.entries(channel.presenceState())
-        .filter(([, presences]) => presences.length > 0)
-        .map(([presenceKey]) => presenceKey);
-      onPresenceChange(onlineUserIds);
-    })
+  const messageChannel: RealtimeChannel = client
+    .channel(`warehouse-chat-${userId}`)
     .on(
       'postgres_changes',
       {
@@ -173,19 +165,34 @@ export function subscribeToChat(
       }
     )
     .subscribe((status) => {
+      onConnectionChange(status === 'SUBSCRIBED');
+    });
+
+  const presenceChannel: RealtimeChannel = client
+    .channel('warehouse-chat-presence', {
+      config: { private: true, presence: { key: userId } },
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const onlineUserIds = Object.entries(presenceChannel.presenceState())
+        .filter(([, presences]) => presences.length > 0)
+        .map(([presenceKey]) => presenceKey);
+      onPresenceChange(onlineUserIds);
+    })
+    .subscribe((status) => {
       const subscribed = status === 'SUBSCRIBED';
-      onConnectionChange(subscribed);
       if (!subscribed) {
         onPresenceChange([]);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           onPresenceError(
-            new Error('تعذر الاتصال الآمن بحالة الطرف الآخر. أعد تشغيل مخطط Supabase المحدّث.')
+            new Error(
+              'تعذر التحقق من حالة اتصال الطرف الآخر. رسائل المحادثة مستقلة؛ شغّل مخطط Supabase المحدّث لتفعيل الحضور الآمن.'
+            )
           );
         }
         return;
       }
 
-      void channel
+      void presenceChannel
         .track({})
         .then((result) => {
           if (result !== 'ok') {
@@ -208,6 +215,7 @@ export function subscribeToChat(
     });
 
   return () => {
-    void client.removeChannel(channel);
+    void client.removeChannel(messageChannel);
+    void client.removeChannel(presenceChannel);
   };
 }
